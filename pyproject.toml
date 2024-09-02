@@ -1,0 +1,74 @@
+[project]
+name = "synthesized-datasets"
+version = "0.1.0"
+description = "Add your description here"
+authors = [{ name = "hppRC", email = "hpp.ricecake@gmail.com" }]
+dependencies = [
+    "torch",
+    "xformers",
+    "vllm",
+    "flashinfer",
+    "datasets>=2.21.0",
+    "more-itertools>=10.4.0",
+    "sentencepiece>=0.2.0",
+    "transformers>=4.44.2",
+    "konoha>=5.5.6",
+    "vllm>=0.5.5",
+]
+readme = "README.md"
+requires-python = ">= 3.8"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.rye]
+managed = true
+dev-dependencies = ["pip>=24.2", "setuptools>=74.0.0", "ruff>=0.6.3"]
+
+[[tool.rye.sources]]
+name = "torch"
+url = "https://download.pytorch.org/whl/cu124"
+type = "index"
+
+[[tool.rye.sources]]
+name = "xformers"
+url = "https://download.pytorch.org/whl/cu124"
+type = "index"
+
+[[tool.rye.sources]]
+name = "flashinfer"
+url = "https://flashinfer.ai/whl/cu124/torch2.4"
+type = "index"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/synthesized_datasets"]
+
+[tool.ruff]
+exclude = [".git", ".mypy_cache", ".ruff_cache", ".venv", "outputs", "datasets"]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+fixable = ["ALL"]
+unfixable = []
+# https://qiita.com/yuji38kwmt/items/63e82126076204923520
+select = ["F", "E", "W", "I", "B", "PL", "UP", "N"]
+ignore = [
+    "PLR0913", # Too many arguments in function definition
+    "PLR2004", # Magic value used in comparison
+    "N812",    # Lowercase imported as non-lowercase
+    "N806",    # Lowercase imported as non-lowercase
+    "F403",    # unable to detect undefined names
+    "E501",    # Line too long
+    "N999",    # Invalid module name
+    "PLR0912", # too many branches
+    "B905",    # zip strict
+]
+
+[tool.ruff.format]
+quote-style = "double"
+line-ending = "auto"
