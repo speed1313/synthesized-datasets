@@ -1,8 +1,8 @@
 import random
 import uuid
-from datetime import datetime
 from pathlib import Path
 
+import click
 from vllm import LLM, SamplingParams
 
 import datasets as ds
@@ -73,12 +73,6 @@ def make_input_text(passage: str, tokenizer) -> str:
 def create_dataset(texts: list[str], llm: LLM, tokenizer, sampling_params) -> ds.Dataset:
     inputs_text = [make_input_text(t, tokenizer) for t in texts]
 
-    sampling_params = SamplingParams(
-        temperature=0.99,
-        top_p=0.95,
-        max_tokens=256,
-    )
-
     responses = llm.generate(
         inputs_text,
         sampling_params=sampling_params,
@@ -93,7 +87,7 @@ def create_dataset(texts: list[str], llm: LLM, tokenizer, sampling_params) -> ds
 
         try:
             query, answer, *_ = output_text.split("回答: ")
-            query = query.strip().replace("質問: ", "", 1).strip()
+            query = query.strip().replace("質問:", "", 1).strip()
             if "\n" in answer:
                 answer = answer.split("\n")[0].strip()
             query, answer = query.strip().replace("\n", ""), answer.strip().replace("\n", "")
@@ -131,24 +125,44 @@ def create_dataset(texts: list[str], llm: LLM, tokenizer, sampling_params) -> ds
     return dataset
 
 
-def main():
+@click.command()
+@click.option("--dtype", type=str, default="bf16")
+@click.option("--tp", type=int, default=4)
+def main(dtype: str, tp: int):
     model_name = "google/gemma-2-9b-it"
     root_dir = Path("datasets/wiki_qa/gemma2_9b")
     batch_size = 10000
     max_file_size = 1_000_000
 
+    sampling_params = SamplingParams(
+        temperature=0.99,
+        top_p=0.95,
+        max_tokens=128,
+    )
+
+    if dtype == "bf16":
+        dtype = "bfloat16"
+        enable_prefix_caching = True
+    elif dtype == "fp16":
+        dtype = "float16"
+        enable_prefix_caching = False
+    else:
+        raise ValueError(f"Invalid dtype: {dtype}")
+
+    rng = random.SystemRandom()
+    seed = rng.randint(0, 2**32 - 1)
+
     llm = LLM(
         model_name,
         trust_remote_code=True,
-        tensor_parallel_size=4,
+        tensor_parallel_size=tp,
         quantization=None,
-        dtype="bfloat16",
-        # dtype="float16",
+        dtype=dtype,
         gpu_memory_utilization=0.9,
-        seed=int(datetime.now().timestamp()),
-        enforce_eager=True,
+        seed=seed,
+        enforce_eager=False,
         use_v2_block_manager=False,
-        enable_prefix_caching=True,
+        enable_prefix_caching=enable_prefix_caching,
     )
     tokenizer = llm.get_tokenizer()
 
@@ -157,12 +171,6 @@ def main():
     texts: list[str] = dataset["text"]
 
     print(f"Processing Dataset: {len(dataset)} samples")
-
-    sampling_params = SamplingParams(
-        temperature=0.99,
-        top_p=0.95,
-        max_tokens=128,
-    )
 
     root_dir.mkdir(parents=True, exist_ok=True)
 

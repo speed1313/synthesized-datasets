@@ -1,9 +1,8 @@
 import random
 import uuid
-from datetime import datetime
 from pathlib import Path
-import click
 
+import click
 from vllm import LLM, SamplingParams
 
 import datasets as ds
@@ -11,8 +10,7 @@ import datasets as ds
 
 def make_input_text(passage: str, tokenizer) -> str:
     passage = passage.strip().replace("\n", "")
-    prompt = f"""
-文章に基づいて質問とそれに対する回答を作成してください。
+    prompt = f"""文章に基づいて質問とそれに対する回答を作成してください。
 
 ## 一般的な指示
 - 日本語Wikipediaの文章から質問と回答を作成してください
@@ -59,7 +57,7 @@ def create_dataset(texts: list[str], llm: LLM, tokenizer, sampling_params) -> ds
 
         try:
             query, answer, *_ = output_text.split("回答: ")
-            query = query.strip().replace("質問: ", "", 1).strip()
+            query = query.strip().replace("質問:", "", 1).strip()
             if "\n" in answer:
                 answer = answer.split("\n")[0].strip()
             query, answer = query.strip().replace("\n", ""), answer.strip().replace("\n", "")
@@ -108,13 +106,14 @@ def main(dtype: str):
     if dtype == "bf16":
         dtype = "bfloat16"
         enable_prefix_caching = True
-        enable_chunked_prefill = True
     elif dtype == "fp16":
         dtype = "float16"
         enable_prefix_caching = False
-        enable_chunked_prefill = False
     else:
         raise ValueError(f"Invalid dtype: {dtype}")
+
+    rng = random.SystemRandom()
+    seed = rng.randint(0, 2**32 - 1)
 
     llm = LLM(
         model_name,
@@ -123,12 +122,12 @@ def main(dtype: str):
         quantization=None,
         dtype=dtype,
         gpu_memory_utilization=0.9,
-        seed=int(datetime.now().timestamp()),
+        seed=seed,
         enforce_eager=True,
-        # we should disable prefix-caching and chunked prefilling to avoid errors
+        # we should disable prefix-caching and chunked prefilling to avoid errors on V100
         # ref: https://github.com/vllm-project/vllm/issues/2729#issuecomment-2290484761
         enable_prefix_caching=enable_prefix_caching,
-        enable_chunked_prefill=enable_chunked_prefill,
+        enable_chunked_prefill=False,
     )
     tokenizer = llm.get_tokenizer()
 

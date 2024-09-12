@@ -1,8 +1,8 @@
 import random
 import uuid
-from datetime import datetime
 from pathlib import Path
 
+import click
 from vllm import LLM, SamplingParams
 
 import datasets as ds
@@ -84,23 +84,37 @@ def create_dataset(texts: list[str], llm: LLM, tokenizer, sampling_params) -> ds
     return dataset
 
 
-def main():
+@click.command()
+@click.option("--dtype", type=str, default="bf16")
+def main(dtype: str):
     model_name = "sbintuitions/sarashina2-13b"
     root_dir = Path("datasets/wiki_qa/sarashina2_13b")
     batch_size = 10000
     max_file_size = 1_000_000
+
+    if dtype == "bf16":
+        dtype = "bfloat16"
+        enable_prefix_caching = True
+    elif dtype == "fp16":
+        dtype = "float16"
+        enable_prefix_caching = False
+    else:
+        raise ValueError(f"Invalid dtype: {dtype}")
+
+    rng = random.SystemRandom()
+    seed = rng.randint(0, 2**32 - 1)
 
     llm = LLM(
         model_name,
         trust_remote_code=True,
         tensor_parallel_size=4,
         quantization=None,
-        dtype="bfloat16",
+        dtype=dtype,
         gpu_memory_utilization=0.9,
-        seed=int(datetime.now().timestamp()),
+        seed=seed,
         enforce_eager=True,
         use_v2_block_manager=False,
-        enable_prefix_caching=True,
+        enable_prefix_caching=enable_prefix_caching,
     )
     tokenizer = llm.get_tokenizer()
 

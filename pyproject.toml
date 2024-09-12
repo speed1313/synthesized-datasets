@@ -6,7 +6,6 @@ authors = [{ name = "hppRC", email = "hpp.ricecake@gmail.com" }]
 dependencies = [
     "torch",
     "xformers",
-    "vllm",
     "flashinfer",
     "datasets>=2.21.0",
     "more-itertools>=10.4.0",
@@ -14,9 +13,11 @@ dependencies = [
     "transformers>=4.44.2",
     "konoha>=5.5.6",
     "vllm>=0.5.5",
+    "mecab-python3>=1.0.9",
 ]
 readme = "README.md"
 requires-python = ">= 3.8"
+# "vllm @ git+https://github.com/vllm-project/vllm",
 
 [build-system]
 requires = ["hatchling"]
@@ -45,7 +46,7 @@ type = "index"
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/synthesized_datasets"]
+packages = ["src"]
 
 [tool.ruff]
 exclude = [".git", ".mypy_cache", ".ruff_cache", ".venv", "outputs", "datasets"]
@@ -67,6 +68,7 @@ ignore = [
     "N999",    # Invalid module name
     "PLR0912", # too many branches
     "B905",    # zip strict
+    "PLR0915", # Too many statements
 ]
 
 [tool.ruff.format]
